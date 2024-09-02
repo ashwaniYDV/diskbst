@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"path/filepath"
+	"strconv"
 	"testing"
 )
 
@@ -90,4 +91,65 @@ func TestBST(t *testing.T) {
 		}
 
 	})
+}
+
+// BenchmarkPut benchmarks the Put method
+func BenchmarkPut(b *testing.B) {
+	path := b.TempDir()
+	pathName := filepath.Join(path, "benchmark.bst")
+
+	w, err := OpenWriter(pathName)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	defer w.Close()
+
+	for i := 0; i < b.N; i++ {
+		key := []byte("key" + strconv.Itoa(i))
+		value := []byte("value" + strconv.Itoa(i))
+
+		if err := w.Put(key, value); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkGet benchmarks the Get method
+func BenchmarkGet(b *testing.B) {
+	path := b.TempDir()
+	pathName := filepath.Join(path, "benchmark.bst")
+
+	w, err := OpenWriter(pathName)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i := 0; i < 1000; i++ {
+		key := []byte("key" + strconv.Itoa(i))
+		value := []byte("value" + strconv.Itoa(i))
+
+		if err := w.Put(key, value); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	w.Close()
+
+	r, err := OpenReader(pathName)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	defer r.Close()
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		key := []byte("key" + strconv.Itoa(i%1000))
+
+		if _, err := r.Get(key); err != nil {
+			b.Fatal(err)
+		}
+	}
 }
